@@ -1,20 +1,20 @@
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
-from vectorizer import ReviewVectorizer
+from vectorizer import TextVectorizer
 
 import pandas as pd
 
-class ReviewDataset(Dataset):
-    def __init__(self, review_data, vectorizer):
+class TextDataset(Dataset):
+    def __init__(self, text_data, vectorizer):
         """
         Args:
-            review_data (pandas.DataFrame): the dataset
-            vectorizer (ReviewVectorizer): vectorizer instantiated from dataset
+            text_data (pandas.DataFrame): the dataset
+            vectorizer (TextVectorizer): vectorizer instantiated from dataset
         """
 
-        self.review_data = review_data
+        self.text_data = text_data
         self._vectorizer = vectorizer
-        self.train_data, self.test_data = train_test_split(self.review_data, test_size=0.2)
+        self.train_data, self.test_data = train_test_split(self.text_data, test_size=0.2)
         self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.25)
 
         self._lookup_dict = {
@@ -41,18 +41,18 @@ class ReviewDataset(Dataset):
 
 
     @classmethod
-    def load_dataset_and_make_vectorizer(cls, review_csv):
+    def load_dataset_and_make_vectorizer(cls, text_csv):
         """ Load dataset and make a new vectorizer from scratch
 
         Args:
-            review_csv (str): location of the dataset
+            text_csv (str): location of the dataset
 
         Returns:
-            an instance of ReviewDataset
+            an instance of textDataset
         """
 
-        review_data = pd.read_csv(review_csv)
-        return cls(review_data, ReviewVectorizer.from_dataframe(review_data))
+        text_data = pd.read_csv(text_csv)
+        return cls(text_data, TextVectorizer.from_dataframe(text_data))
 
     def get_vectorizer(self):
         """ Returns the vectorizer """
@@ -66,7 +66,7 @@ class ReviewDataset(Dataset):
         """
 
         self._target_split = split
-        self._target_df, self._target_size = self._lookup_dict[split]
+        self._target_data, self._target_size = self._lookup_dict[split]
 
     def __len__(self):
         return self._target_size
@@ -81,12 +81,12 @@ class ReviewDataset(Dataset):
             a dict of the data point's features (x_data) and label (y_target)
         """
         
-        row = self._target_df.iloc[index]
+        row = self._target_data.iloc[index]
 
-        review_vector = \
-            self._vectorizer.vectorize(row.review)
+        text_vector = \
+            self._vectorizer.vectorize(row.text)
 
-        sentiment_index = \
-            self._vectorizer.sentiment_vocab.lookup_token(row.sentiment)
+        label_index = \
+            self._vectorizer.label_vocab.lookup_token(row.label)
 
-        return {'x_data': review_vector, 'y_target': sentiment_index}
+        return {'x_data': text_vector, 'y_target': label_index}

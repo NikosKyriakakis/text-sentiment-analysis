@@ -3,12 +3,6 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
-def compute_accuracy(y_pred, y_target):
-    y_target = y_target.cpu()
-    y_pred_indices = (torch.sigmoid(y_pred) > 0.5).cpu().long()
-    n_correct = torch.eq(y_pred_indices, y_target).sum().item()
-    return n_correct / len(y_pred_indices) * 100
     
 
 class MLP(nn.Module):
@@ -27,6 +21,10 @@ class MLP(nn.Module):
         }
 
     def setup(self):
+        if self._args.binary_class == True:
+            self._out_activation = torch.sigmoid
+        else:
+            self._out_activation = torch.softmax
         self.configure_optimizer(self._args.optimizer)
         self.configure_loss_function(self._args.criterion)
 
@@ -39,11 +37,13 @@ class MLP(nn.Module):
             self._optimizer = optim.Adam(self.parameters(), lr=self._args.learning_rate)
 
     def forward(self, X):
-        y_out = self.fc1(X).squeeze()
-        return y_out
-        # for layer in self._topology:
-        #     X = layer(X)
-        # return X
+        pass
+
+    def compute_accuracy(self, y_pred, y_target):
+        y_target = y_target.cpu()
+        y_pred_indices = (self._out_activation(y_pred) > 0.5).cpu().long()
+        n_correct = torch.eq(y_pred_indices, y_target).sum().item()
+        return n_correct / len(y_pred_indices) * 100
 
     def checkpoint(self):
         size = len(self._logs["val_loss"])
@@ -79,7 +79,7 @@ class MLP(nn.Module):
 
         for batch_index, batch_dict in enumerate(batch_generator):
             # Compute the output
-            logits = self(X=batch_dict['x_data'].float())
+            logits = self(x=batch_dict['x_data'].float())
 
             # Compute the loss
             loss = self._criterion(logits, batch_dict['y_target'].float())
@@ -87,7 +87,7 @@ class MLP(nn.Module):
             running_loss += (batch_loss - running_loss) / (batch_index + 1)
             
             # Compute the accuracy
-            batch_acc = compute_accuracy(logits, batch_dict['y_target'].float())
+            batch_acc = self.compute_accuracy(logits, batch_dict['y_target'].float())
             running_acc += (batch_acc - running_acc) / (batch_index + 1)
 
         return running_loss, running_acc
@@ -111,7 +111,7 @@ class MLP(nn.Module):
             self._optimizer.zero_grad()
 
             # Perform a forward pass
-            logits = self(X=batch_dict['x_data'].float())
+            logits = self(x=batch_dict['x_data'].float())
 
             # Compute the loss for that pass
             loss = self._criterion(logits, batch_dict['y_target'].float())
@@ -124,7 +124,7 @@ class MLP(nn.Module):
             # Use the optimizer to take gradient step
             self._optimizer.step()
 
-            batch_acc = compute_accuracy(logits, batch_dict['y_target'].float())
+            batch_acc = self.compute_accuracy(logits, batch_dict['y_target'].float())
             running_acc += (batch_acc - running_acc) / (batch_index + 1)
 
         return running_loss, running_acc
@@ -132,20 +132,34 @@ class MLP(nn.Module):
     def plot_loss_logs(self):
         plt.figure(figsize=(10, 5))
         plt.title("Loss")
-        plt.plot(self._args.num_epochs, self._logs["train_loss"])
-        plt.plot(self._args.num_epochs, self._logs["val_loss"])
+        epochs = [e for e in range(self._args.num_epochs)]
+        plt.plot(epochs, self._logs["train_loss"])
+        plt.plot(epochs, self._logs["val_loss"])
         plt.legend(['Train-loss', 'Validation-loss'])
+        plt.show()
+
+    def plot_acc_logs(self):
+        plt.figure(figsize=(10, 5))
+        plt.title("Accuracy")
+        epochs = [e for e in range(self._args.num_epochs)]
+        plt.plot(epochs, self._logs["train_acc"])
+        plt.plot(epochs, self._logs["val_acc"])
+        plt.legend(['Train-accuracy', 'Validation-accuracy'])
         plt.show()
 
 class BOWClassifier(MLP):
     def __init__(self, args):
         super().__init__(args)
+
+        self._topology = nn.Sequential (
+            nn.Linear(self._args.in_features, 128),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(128, 1)
+        )
+
+    def forward(self, x):
+        for layer in self._topology:
+            x = layer(x)
+        return x.squeeze()
         
-        # self._topology = nn.Sequential (
-        #     nn.Linear(self._args.in_features, 128),
-        #     nn.ReLU(),
-        #     nn.Linear(128, 64),
-        #     nn.ReLU(),
-        #     nn.Linear(64, 1)
-        # )    
-        self.fc1 = nn.Linear(in_features=self._args.in_features, out_features=1)
