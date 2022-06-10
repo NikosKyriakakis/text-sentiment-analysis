@@ -36,7 +36,7 @@ class MLP(nn.Module):
         if optimizer == "Adam":
             self._optimizer = optim.Adam(self.parameters(), lr=self._args.learning_rate)
 
-    def forward(self, X):
+    def forward(self, x):
         pass
 
     def compute_accuracy(self, y_pred, y_target):
@@ -82,12 +82,13 @@ class MLP(nn.Module):
             logits = self(x=batch_dict['x_data'].float())
 
             # Compute the loss
-            loss = self._criterion(logits, batch_dict['y_target'].float())
+            target = batch_dict['y_target'].view(-1, 1)
+            loss = self._criterion(logits, target.float())
             batch_loss = loss.to("cpu").item()
             running_loss += (batch_loss - running_loss) / (batch_index + 1)
             
             # Compute the accuracy
-            batch_acc = self.compute_accuracy(logits, batch_dict['y_target'].float())
+            batch_acc = self.compute_accuracy(logits, target.float())
             running_acc += (batch_acc - running_acc) / (batch_index + 1)
 
         return running_loss, running_acc
@@ -114,7 +115,8 @@ class MLP(nn.Module):
             logits = self(x=batch_dict['x_data'].float())
 
             # Compute the loss for that pass
-            loss = self._criterion(logits, batch_dict['y_target'].float())
+            target = batch_dict['y_target'].view(-1, 1)
+            loss = self._criterion(logits, target.float())
             batch_loss = loss.to("cpu").item()
             running_loss += (batch_loss - running_loss) / (batch_index + 1)
             
@@ -124,7 +126,7 @@ class MLP(nn.Module):
             # Use the optimizer to take gradient step
             self._optimizer.step()
 
-            batch_acc = self.compute_accuracy(logits, batch_dict['y_target'].float())
+            batch_acc = self.compute_accuracy(logits, target.float())
             running_acc += (batch_acc - running_acc) / (batch_index + 1)
 
         return running_loss, running_acc
@@ -161,5 +163,5 @@ class BOWClassifier(MLP):
     def forward(self, x):
         for layer in self._topology:
             x = layer(x)
-        return x.squeeze()
+        return x
         
