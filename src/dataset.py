@@ -16,16 +16,16 @@ class TextDataset(Dataset):
             vectorizer (TextVectorizer): vectorizer instantiated from dataset
         """
 
-        self.text_data = text_data
+        # self._text_data = text_data
         self._vectorizer = vectorizer
-        self.train_data, self.test_data = train_test_split(self.text_data, test_size=0.2)
+        self.train_data, self.test_data = train_test_split(text_data, test_size=0.2)
         self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.25)
 
         nltk.download('stopwords')
         nltk.download('wordnet')
         nltk.download('omw-1.4')
-        
-        self._stop_words = set(stopwords.words(language))
+
+        self._stopwords = set(stopwords.words(language))
         self._lemmatizer = WordNetLemmatizer()
 
         self._lookup_dict = {
@@ -94,7 +94,7 @@ class TextDataset(Dataset):
         # Remove all non-word characters (everything except numbers and letters)
         string = re.sub(r"[^\w\s]", '', string)
         # Remove stopwords and lemmatize each one
-        string = ' '.join([self._lemmatizer.lemmatize(w) for w in string.split() if not w in self._stop_words])
+        string = ' '.join([self._lemmatizer.lemmatize(w) for w in string.split() if not w in self._stopwords])
 
         return string
 
