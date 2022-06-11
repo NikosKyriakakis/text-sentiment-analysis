@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from sklearn.metrics import f1_score
     
 
 class MLP(nn.Module):
@@ -16,8 +17,10 @@ class MLP(nn.Module):
         self._logs = {
             "train_loss": [],
             "train_acc": [],
+            "train_f1": [],
             "val_loss": [],
-            "val_acc": []
+            "val_acc": [],
+            "val_f1": []
         }
 
     def setup(self):
@@ -31,10 +34,14 @@ class MLP(nn.Module):
     def configure_loss_function(self, criterion):
         if criterion == "bce_logits":
             self._criterion = nn.BCEWithLogitsLoss()
+        else:
+            self._criterion = nn.CrossEntropyLoss()
 
     def configure_optimizer(self, optimizer):
         if optimizer == "Adam":
             self._optimizer = optim.Adam(self.parameters(), lr=self._args.learning_rate)
+        else:
+            self._optimizer = optim.SGD(self.parameters(), lr=0.001, momentum=0.9)
 
     def forward(self, x):
         pass
@@ -44,6 +51,11 @@ class MLP(nn.Module):
         y_pred_indices = (self._out_activation(y_pred) > 0.5).cpu().long()
         n_correct = torch.eq(y_pred_indices, y_target).sum().item()
         return n_correct / len(y_pred_indices) * 100
+
+    def compute_f1(self, y_pred, y_target):
+        y_target = y_target.cpu()
+        y_pred_indices = (self._out_activation(y_pred) > 0.5).cpu().long()
+        return f1_score(y_target, y_pred_indices) * 100
 
     def checkpoint(self):
         size = len(self._logs["val_loss"])
@@ -55,15 +67,17 @@ class MLP(nn.Module):
         for _ in tqdm(range(self._args.num_epochs)):
             self.checkpoint()
 
-            train_loss, train_acc = self.train_net()
-            self._logs["train_loss"].append(train_loss)
-            self._logs["train_acc"].append(train_acc)
+            loss, acc, f1 = self.train_net()
+            self._logs["train_loss"].append(loss)
+            self._logs["train_acc"].append(acc)
+            self._logs["train_f1"].append(f1)
 
-            val_loss, val_acc = 0, 0
+            loss, acc, f1 = 0, 0, 0
             with torch.no_grad():
-                val_loss, val_acc = self.eval_net(mode='val')
-                self._logs["val_loss"].append(val_loss)
-                self._logs["val_acc"].append(val_acc)
+                loss, acc, f1 = self.eval_net(mode='val')
+                self._logs["val_loss"].append(loss)
+                self._logs["val_acc"].append(acc)
+                self._logs["val_f1"].append(f1)
         
     def eval_net(self, mode):
         self.eval()
@@ -76,22 +90,27 @@ class MLP(nn.Module):
 
         running_loss = 0
         running_acc = 0
+        running_f1 = 0
 
         for batch_index, batch_dict in enumerate(batch_generator):
             # Compute the output
             logits = self(x=batch_dict['x_data'].float())
 
             # Compute the loss
-            target = batch_dict['y_target'].view(-1, 1)
-            loss = self._criterion(logits, target.float())
+            target = batch_dict['y_target'].view(-1, 1).float()
+            loss = self._criterion(logits, target)
             batch_loss = loss.to("cpu").item()
             running_loss += (batch_loss - running_loss) / (batch_index + 1)
             
             # Compute the accuracy
-            batch_acc = self.compute_accuracy(logits, target.float())
+            batch_acc = self.compute_accuracy(logits, target)
             running_acc += (batch_acc - running_acc) / (batch_index + 1)
 
-        return running_loss, running_acc
+            # Compute F1-score
+            batch_f1 = self.compute_f1(logits, target)
+            running_f1 += (batch_f1 - running_f1) / (batch_index + 1)
+
+        return running_loss, running_acc, running_f1
 
 
     def train_net(self):
@@ -106,6 +125,7 @@ class MLP(nn.Module):
 
         running_loss = 0
         running_acc = 0
+        running_f1 = 0
 
         for batch_index, batch_dict in enumerate(batch_generator):
             # Zero gradients
@@ -115,8 +135,8 @@ class MLP(nn.Module):
             logits = self(x=batch_dict['x_data'].float())
 
             # Compute the loss for that pass
-            target = batch_dict['y_target'].view(-1, 1)
-            loss = self._criterion(logits, target.float())
+            target = batch_dict['y_target'].view(-1, 1).float()
+            loss = self._criterion(logits, target)
             batch_loss = loss.to("cpu").item()
             running_loss += (batch_loss - running_loss) / (batch_index + 1)
             
@@ -126,38 +146,47 @@ class MLP(nn.Module):
             # Use the optimizer to take gradient step
             self._optimizer.step()
 
-            batch_acc = self.compute_accuracy(logits, target.float())
+            batch_acc = self.compute_accuracy(logits, target)
             running_acc += (batch_acc - running_acc) / (batch_index + 1)
 
-        return running_loss, running_acc
+            batch_f1 = self.compute_f1(logits, target)
+            running_f1 += (batch_f1 - running_f1) / (batch_index + 1)
 
-    def plot_loss_logs(self):
+        return running_loss, running_acc, running_f1
+
+    def plot_logs(self, title, legend):
         plt.figure(figsize=(10, 5))
-        plt.title("Loss")
+        plt.title(title)
+
         epochs = [e for e in range(self._args.num_epochs)]
-        plt.plot(epochs, self._logs["train_loss"])
-        plt.plot(epochs, self._logs["val_loss"])
-        plt.legend(['Train-loss', 'Validation-loss'])
+
+        if title == "Accuracy":
+            train_metric = "train_acc"
+            val_metric = "val_acc"
+        elif title == "Loss":
+            train_metric = "train_loss"
+            val_metric = "val_loss"
+        else:
+            train_metric = "train_f1"
+            val_metric = "val_f1"
+
+        plt.plot(epochs, self._logs[train_metric])
+        plt.plot(epochs, self._logs[val_metric])
+
+        plt.legend(legend)
         plt.show()
 
-    def plot_acc_logs(self):
-        plt.figure(figsize=(10, 5))
-        plt.title("Accuracy")
-        epochs = [e for e in range(self._args.num_epochs)]
-        plt.plot(epochs, self._logs["train_acc"])
-        plt.plot(epochs, self._logs["val_acc"])
-        plt.legend(['Train-accuracy', 'Validation-accuracy'])
-        plt.show()
 
 class BOWClassifier(MLP):
     def __init__(self, args):
         super().__init__(args)
 
         self._topology = nn.Sequential (
-            nn.Linear(self._args.in_features, 128),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(128, 1)
+            # nn.Linear(self._args.in_features, 128),
+            # nn.ReLU(),
+            # nn.Dropout(0.5),
+            # nn.Linear(128, 1)
+            nn.Linear(self._args.in_features, 1)
         )
 
     def forward(self, x):

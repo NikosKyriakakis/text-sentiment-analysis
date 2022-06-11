@@ -56,6 +56,7 @@ class TextDataset(Dataset):
 
     def get_vectorizer(self):
         """ Returns the vectorizer """
+
         return self._vectorizer
 
     def set_split(self, split="train"):
@@ -83,10 +84,8 @@ class TextDataset(Dataset):
         
         row = self._target_data.iloc[index]
 
-        text_vector = \
-            self._vectorizer.vectorize(row.text)
+        text_vector = self._vectorizer.vectorize(row.text)
 
-        label_index = \
-            self._vectorizer.label_vocab.lookup_token(row.label)
+        label_index = self._vectorizer.label_vocab.lookup_token(row.label)
 
         return {'x_data': text_vector, 'y_target': label_index}
