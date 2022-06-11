@@ -44,7 +44,9 @@ class MLP(nn.Module):
             self._optimizer = optim.SGD(self.parameters(), lr=0.001, momentum=0.9)
 
     def forward(self, x):
-        pass
+        for layer in self._topology:
+            x = layer(x)
+        return x
 
     def compute_accuracy(self, y_pred, y_target):
         y_target = y_target.cpu()
@@ -112,7 +114,6 @@ class MLP(nn.Module):
 
         return running_loss, running_acc, running_f1
 
-
     def train_net(self):
         # Initiate training mode
         self.train()
@@ -158,7 +159,7 @@ class MLP(nn.Module):
         plt.figure(figsize=(10, 5))
         plt.title(title)
 
-        epochs = [e for e in range(self._args.num_epochs)]
+        epochs = [(e + 1) for e in range(self._args.num_epochs)]
 
         if title == "Accuracy":
             train_metric = "train_acc"
@@ -189,8 +190,14 @@ class BOWClassifier(MLP):
             nn.Linear(self._args.in_features, 1)
         )
 
-    def forward(self, x):
-        for layer in self._topology:
-            x = layer(x)
-        return x
+# class LSTMClassifier(MLP):
+#     def __init__(self, args):
+#         super.__init__(args)
+
+#         self.topology = nn.Sequential (
+
+#         )
+
+#     def forward(self, x):
+#         h_0 = torch.zeros(1, x.size(0), )
         

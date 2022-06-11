@@ -1,11 +1,15 @@
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from vectorizer import TextVectorizer
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 
+import nltk
 import pandas as pd
+import re
 
 class TextDataset(Dataset):
-    def __init__(self, text_data, vectorizer):
+    def __init__(self, text_data, vectorizer, language='english'):
         """
         Args:
             text_data (pandas.DataFrame): the dataset
@@ -16,6 +20,13 @@ class TextDataset(Dataset):
         self._vectorizer = vectorizer
         self.train_data, self.test_data = train_test_split(self.text_data, test_size=0.2)
         self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.25)
+
+        nltk.download('stopwords')
+        nltk.download('wordnet')
+        nltk.download('omw-1.4')
+        
+        self._stop_words = set(stopwords.words(language))
+        self._lemmatizer = WordNetLemmatizer()
 
         self._lookup_dict = {
             'train': (self.train_data, len(self.train_data)),
@@ -69,6 +80,24 @@ class TextDataset(Dataset):
         self._target_split = split
         self._target_data, self._target_size = self._lookup_dict[split]
 
+    def __string_processing(self, string):
+        """ Preprocess text
+
+        Args:
+            string (_type_): a single data point
+
+        Returns:
+            str: the processed string
+        """
+
+        string = string.lower()
+        # Remove all non-word characters (everything except numbers and letters)
+        string = re.sub(r"[^\w\s]", '', string)
+        # Remove stopwords and lemmatize each one
+        string = ' '.join([self._lemmatizer.lemmatize(w) for w in string.split() if not w in self._stop_words])
+
+        return string
+
     def __len__(self):
         return self._target_size
 
@@ -83,9 +112,8 @@ class TextDataset(Dataset):
         """
         
         row = self._target_data.iloc[index]
-
-        text_vector = self._vectorizer.vectorize(row.text)
-
+        row_text = self.__string_processing(row.text)
+        text_vector = self._vectorizer.vectorize(row_text)
         label_index = self._vectorizer.label_vocab.lookup_token(row.label)
 
         return {'x_data': text_vector, 'y_target': label_index}
