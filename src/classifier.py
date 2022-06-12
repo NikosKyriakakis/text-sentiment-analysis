@@ -66,6 +66,9 @@ class MLP(nn.Module):
                 torch.save(self.state_dict(), self._args.save_dir)
 
     def fit(self):
+        # Send model to available hardware
+        self = self.to(self._args.device)
+
         for _ in tqdm(range(self._args.num_epochs)):
             self.checkpoint()
 
