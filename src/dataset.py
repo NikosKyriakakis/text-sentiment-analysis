@@ -22,11 +22,7 @@ class TextDataset(Dataset):
         self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.25)
 
         nltk.download('stopwords')
-        nltk.download('wordnet')
-        nltk.download('omw-1.4')
-
         self._stopwords = set(stopwords.words(language))
-        self._lemmatizer = WordNetLemmatizer()
 
         self._lookup_dict = {
             'train': (self.train_data, len(self.train_data)),
@@ -84,7 +80,7 @@ class TextDataset(Dataset):
         """ Preprocess text
 
         Args:
-            string (_type_): a single data point
+            string (str): a single data point
 
         Returns:
             str: the processed string
@@ -94,7 +90,7 @@ class TextDataset(Dataset):
         # Remove all non-word characters (everything except numbers and letters)
         string = re.sub(r"[^\w\s]", '', string)
         # Remove stopwords and lemmatize each one
-        string = ' '.join([self._lemmatizer.lemmatize(w) for w in string.split() if not w in self._stopwords])
+        string = ' '.join([w for w in string.split() if not w in self._stopwords])
 
         return string
 
