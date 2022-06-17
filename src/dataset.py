@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
-from vectorizer import TextVectorizer
+from vectorizer import *
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
@@ -59,7 +59,7 @@ class TextDataset(Dataset):
         """
 
         text_data = pd.read_csv(text_csv)
-        return cls(text_data, TextVectorizer.from_dataframe(text_data))
+        return cls(text_data, OneHotVectorizer.from_dataframe(text_data))
 
     def get_vectorizer(self):
         """ Returns the vectorizer """

@@ -7,7 +7,7 @@ from collections import Counter
 class TextVectorizer(object):
     """ The vectorizer class which coordinates the Vocabularies and puts them to use """
     
-    def __init__(self, text_vocab, label_vocab):
+    def __init__(self, text_vocab, label_vocab, seq_len=0):
         """
         Args:
             text_vocab (Vocabulary): maps words to integers
@@ -18,24 +18,11 @@ class TextVectorizer(object):
         self.label_vocab = label_vocab
 
     def vectorize(self, text):
-        """ Create a collapsed one­hit vector for the text
+        pass
 
-        Args:
-            text (str): the text
-
-        Returns:
-            one_hot (np.ndarray): the collapsed one­hot encoding
-        """
-
-        one_hot = np.zeros(len(self.text_vocab), dtype=np.float32)
-        for token in text.split(" "):
-            if token not in string.punctuation:
-                one_hot[self.text_vocab.lookup_token(token)] = 1
-
-        return one_hot
 
     @classmethod
-    def from_dataframe(cls, text_data, cutoff=25):
+    def from_dataframe(cls, text_data, cutoff=25, seq_len=500):
         """ Instantiate the vectorizer from the dataset dataframe
 
         Args:
@@ -64,4 +51,49 @@ class TextVectorizer(object):
             if count > cutoff:
                 text_vocab.add_token(word)
 
-        return cls(text_vocab, label_vocab)
+        return cls(text_vocab, label_vocab, seq_len)
+
+class OneHotVectorizer(TextVectorizer):
+    def __init__(self, text_vocab, label_vocab, seq_len):
+        super().__init__(text_vocab, label_vocab, seq_len)
+    
+    def vectorize(self, text):
+        """ Create a collapsed one­hit vector for the text
+        Args:
+            text (str): the text
+        Returns:
+            one_hot (np.ndarray): the collapsed one­hot encoding
+        """
+
+        one_hot = np.zeros(len(self.text_vocab), dtype=np.float32)
+        for token in text.split(" "):
+            if token not in string.punctuation:
+                one_hot[self.text_vocab.lookup_token(token)] = 1
+
+        return one_hot
+
+class PaddingVectorizer(TextVectorizer):
+    def __init__(self, text_vocab, label_vocab, seq_len):
+        super().__init__(text_vocab, label_vocab, seq_len)
+
+        self.seq_len = seq_len
+
+    @property
+    def seq_len(self):
+        return self.__seq_len
+
+    @seq_len.setter
+    def seq_len(self, value):
+        if value <= 0:
+            raise ValueError("[!!] Invalid sequence length provided. --> Expected non-negative input.")
+        self.__seq_len = value
+
+    def vectorize(self, text):
+        padded_text = []
+        for token in text.split(" "):
+            if token not in string.punctuation:
+                padded_text.append(self.text_vocab.lookup_token(token))
+        padded_text = (self.seq_len - len(padded_text)) * [0] + padded_text
+
+        return padded_text
+

@@ -92,7 +92,7 @@ class MLP(nn.Module):
         self = self.to(self._args.device)
 
         for _ in tqdm(range(self._args.num_epochs)):
-            self.checkpoint()
+            # self.checkpoint()
 
             loss, acc, f1 = self.train_net()
             self._logs["train_loss"].append(loss)
@@ -214,3 +214,40 @@ class BOWClassifier(MLP):
             nn.Linear(128, self._args.out_units)
         )
         
+class CNNClassifier(MLP):
+    def __init__(self, args):
+        super().__init__(args)
+
+        self._topology = nn.Sequential (
+            nn.Conv1d (in_channels=self._args.in_features, out_channels=)
+        )
+
+        self.convs = nn.ModuleList([
+                                    nn.Conv2d(in_channels = 1, 
+                                              out_channels = n_filters, 
+                                              kernel_size = (fs, embedding_dim)) 
+                                    for fs in filter_sizes
+                                    ])
+        
+        self.fc = nn.Linear(len(filter_sizes) * n_filters, output_dim)
+        
+        self.dropout = nn.Dropout(dropout)
+
+class CNN(MLP):
+    def __init__(self, vocab_size, embedding_dim, n_filters, filter_sizes, output_dim, 
+                 dropout, pad_idx):
+        
+        super().__init__()
+                
+        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx = pad_idx)
+        
+        self.convs = nn.ModuleList([
+                                    nn.Conv2d(in_channels = 1, 
+                                              out_channels = n_filters, 
+                                              kernel_size = (fs, embedding_dim)) 
+                                    for fs in filter_sizes
+                                    ])
+        
+        self.fc = nn.Linear(len(filter_sizes) * n_filters, output_dim)
+        
+        self.dropout = nn.Dropout(dropout)
