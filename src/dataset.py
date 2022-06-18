@@ -48,7 +48,7 @@ class TextDataset(Dataset):
 
 
     @classmethod
-    def load_dataset_and_make_vectorizer(cls, text_csv):
+    def load_dataset_and_make_vectorizer(cls, text_csv, vectorizer_mode="bow"):
         """ Load dataset and make a new vectorizer from scratch
 
         Args:
@@ -59,7 +59,7 @@ class TextDataset(Dataset):
         """
 
         text_data = pd.read_csv(text_csv)
-        return cls(text_data, OneHotVectorizer.from_dataframe(text_data))
+        return cls(text_data, TextVectorizer.from_dataframe(text_data, mode=vectorizer_mode))
 
     def get_vectorizer(self):
         """ Returns the vectorizer """

@@ -24,19 +24,19 @@ class TextVectorizer(ABC):
 
 
     @classmethod
-    def from_dataframe(cls, text_data, cutoff=25, seq_len=500, mode="bow"):
+    def from_dataframe(cls, text_data, mode, cutoff=25, seq_len=500):
         """ Instantiate the vectorizer from the dataset dataframe
 
         Args:
             text_data (pandas.DataFrame): the text dataset
-            cutoff (int): the parameter for frequency­based filtering
+            cutoff (int): the parameter for frequency ­based filtering
 
         Returns: 
             an instance of the TextVectorizer
         """
 
-        text_vocab = Vocabulary(add_unk=True)
-        label_vocab = Vocabulary(add_unk=False)
+        text_vocab = Vocabulary(add_unk=True, add_pad=True)
+        label_vocab = Vocabulary(add_unk=False, add_pad=False)
 
         # Add labels
         for label in sorted(set(text_data.label)):
@@ -96,11 +96,12 @@ class PaddingVectorizer(TextVectorizer):
         self.__seq_len = value
 
     def vectorize(self, text):
+        pad_token = self.text_vocab.pad_token
         padded_text = []
         for token in text.split(" "):
             if token not in string.punctuation:
                 padded_text.append(self.text_vocab.lookup_token(token))
-        padded_text = (self.seq_len - len(padded_text)) * [0] + padded_text
+        padded_text = (self.seq_len - len(padded_text)) * [self.text_vocab.lookup_token(pad_token)] + padded_text
 
         return padded_text
 
