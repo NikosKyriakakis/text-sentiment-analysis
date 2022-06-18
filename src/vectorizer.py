@@ -3,8 +3,9 @@ import numpy as np
 
 from vocabulary import Vocabulary
 from collections import Counter
+from abc import ABC, abstractmethod
 
-class TextVectorizer(object):
+class TextVectorizer(ABC):
     """ The vectorizer class which coordinates the Vocabularies and puts them to use """
     
     def __init__(self, text_vocab, label_vocab, seq_len=0):
@@ -17,8 +18,9 @@ class TextVectorizer(object):
         self.text_vocab = text_vocab
         self.label_vocab = label_vocab
 
+    @abstractmethod
     def vectorize(self, text):
-        pass
+        """ Empty abstract method """
 
 
     @classmethod
