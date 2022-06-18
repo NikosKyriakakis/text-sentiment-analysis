@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 class TextVectorizer(ABC):
     """ The vectorizer class which coordinates the Vocabularies and puts them to use """
     
-    def __init__(self, text_vocab, label_vocab, seq_len=0):
+    def __init__(self, text_vocab, label_vocab):
         """
         Args:
             text_vocab (Vocabulary): maps words to integers
@@ -24,7 +24,7 @@ class TextVectorizer(ABC):
 
 
     @classmethod
-    def from_dataframe(cls, text_data, cutoff=25, seq_len=500):
+    def from_dataframe(cls, text_data, cutoff=25, seq_len=500, mode="bow"):
         """ Instantiate the vectorizer from the dataset dataframe
 
         Args:
@@ -53,11 +53,16 @@ class TextVectorizer(ABC):
             if count > cutoff:
                 text_vocab.add_token(word)
 
-        return cls(text_vocab, label_vocab, seq_len)
+        if mode == "bow":
+            vect = OneHotVectorizer(text_vocab, label_vocab)
+        else:
+            vect = PaddingVectorizer(text_vocab, label_vocab, seq_len)
+
+        return vect
 
 class OneHotVectorizer(TextVectorizer):
-    def __init__(self, text_vocab, label_vocab, seq_len):
-        super().__init__(text_vocab, label_vocab, seq_len)
+    def __init__(self, text_vocab, label_vocab):
+        super().__init__(text_vocab, label_vocab)
     
     def vectorize(self, text):
         """ Create a collapsed one­hit vector for the text
@@ -76,7 +81,7 @@ class OneHotVectorizer(TextVectorizer):
 
 class PaddingVectorizer(TextVectorizer):
     def __init__(self, text_vocab, label_vocab, seq_len):
-        super().__init__(text_vocab, label_vocab, seq_len)
+        super().__init__(text_vocab, label_vocab)
 
         self.seq_len = seq_len
 
