@@ -1,5 +1,6 @@
 import string
 import numpy as np
+from tqdm import tqdm
 
 from vocabulary import Vocabulary
 from collections import Counter
@@ -104,4 +105,22 @@ class PaddingVectorizer(TextVectorizer):
         padded_text = (self.seq_len - len(padded_text)) * [self.text_vocab.lookup_token(pad_token)] + padded_text
 
         return padded_text
+
+    def load_pretrained_embed(self,filename):
+        pad_token = self.text_vocab.pad_token
+        embeddings = None
+        with open(filename, "r", encoding='utf-8', newline='\n', errors='ignore') as f:
+            _, d = map(int, f.readline().split())
+
+            # Initilize random embeddings
+            embeddings = np.random.uniform(-0.25, 0.25, (len(self.text_vocab.token_to_idx), d))
+            embeddings[self.text_vocab.lookup_token(pad_token)] = np.zeros((d,))
+
+            for line in tqdm(f):
+                tokens = line.rstrip().split(' ')
+                word = tokens[0]
+                if self.text_vocab.lookup_token(word) != self.text_vocab.unk_index:
+                    embeddings[self.text_vocab.lookup_token(word)] = np.array(tokens[1:], dtype=np.float32)
+        
+        return embeddings
 

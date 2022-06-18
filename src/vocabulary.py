@@ -11,8 +11,8 @@ class Vocabulary(object):
 
         if token_to_idx is None:
             token_to_idx = {}
-        self._token_to_idx = token_to_idx
-        self._idx_to_token = {idx: token for token, idx in self._token_to_idx.items()}
+        self.token_to_idx = token_to_idx
+        self._idx_to_token = {idx: token for token, idx in self.token_to_idx.items()}
         self._add_unk = add_unk
         self._unk_token = unk_token
         self.pad_token = pad_token
@@ -23,7 +23,15 @@ class Vocabulary(object):
         self.unk_index = -1
         if add_unk:
             self.unk_index = self.add_token(unk_token)
-    
+
+    @property
+    def token_to_idx(self):
+        return self.__token_to_idx
+
+    @token_to_idx.setter
+    def token_to_idx(self, value):
+        self.__token_to_idx = value
+
     @property
     def pad_token(self):
         return self._pad_token
@@ -44,11 +52,11 @@ class Vocabulary(object):
             index (int): the integer corresponding to the token
         """
 
-        if token in self._token_to_idx:
-            index = self._token_to_idx[token]
+        if token in self.token_to_idx:
+            index = self.token_to_idx[token]
         else:
-            index = len(self._token_to_idx)
-            self._token_to_idx[token] = index
+            index = len(self.token_to_idx)
+            self.token_to_idx[token] = index
             self._idx_to_token[index] = token
 
         return index
@@ -69,9 +77,9 @@ class Vocabulary(object):
         """
 
         if self._add_unk:
-            return self._token_to_idx.get(token, self.unk_index)
+            return self.token_to_idx.get(token, self.unk_index)
         else:
-            return self._token_to_idx[token]
+            return self.token_to_idx[token]
     
     def lookup_index(self, index):
         """ Return the token associated with the index
@@ -94,4 +102,4 @@ class Vocabulary(object):
         return "<Vocabulary(size=%d)>" % len(self)
     
     def __len__(self):
-        return len(self._token_to_idx)
+        return len(self.token_to_idx)
