@@ -16,7 +16,6 @@ class TextDataset(Dataset):
             vectorizer (TextVectorizer): vectorizer instantiated from dataset
         """
 
-        # self._text_data = text_data
         self._vectorizer = vectorizer
         self.train_data, self.test_data = train_test_split(text_data, test_size=0.2)
         self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.25)

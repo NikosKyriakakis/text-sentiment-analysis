@@ -10,7 +10,6 @@ from sklearn.metrics import f1_score
 
 plt.style.use('ggplot')
 
-
 class MLP(nn.Module, ABC):
     def __init__(self, args):
         super().__init__()
@@ -123,7 +122,7 @@ class MLP(nn.Module, ABC):
 
         for batch_index, batch_dict in enumerate(batch_generator):
             # Compute the output
-            logits = self(x=batch_dict['x_data'].long())
+            logits = self(x=batch_dict['x_data'])
 
             # Compute the loss
             target = self._prepare_lossfunc(batch_dict['y_target'])
@@ -160,7 +159,7 @@ class MLP(nn.Module, ABC):
             self._optimizer.zero_grad()
 
             # Perform a forward pass
-            logits = self(x=batch_dict['x_data'].long())
+            logits = self(x=batch_dict['x_data'])
 
             # Compute the loss for that pass
             target = self._prepare_lossfunc(batch_dict['y_target'])
@@ -225,46 +224,36 @@ class CNNClassifier(MLP):
     def __init__(self, args):
         super().__init__(args)
 
-        # self._topology = nn.Sequential (
-        #     nn.Embedding.from_pretrained(pretrained_embedding = args.pretrained_embedding, freeze=args.freeze_embedding),
-        #     nn.ModuleList([
-        #     nn.Conv1d(in_channels=args.embed_dim,
-        #               out_channels=args.num_filters[i],
-        #               kernel_size=args.filter_sizes[i])
-        #     for i in range(len(args.filter_sizes))
-        # ]),
-        # nn.Linear(len(args.filter_sizes) * args.n_filters, args.output_dim),    
-        # nn.Dropout(dropout)
-        # )
+        self.embedding = nn.Embedding.from_pretrained (
+            args.pretrained_embedding, 
+            freeze=args.freeze_embedding
+        )
 
-
-        self.embedding = nn.Embedding.from_pretrained(args.pretrained_embedding,
-                                                          freeze=args.freeze_embedding)
-        
         # Conv Network
-        self.conv1d_list = nn.ModuleList([
-            nn.Conv1d(in_channels=args.embed_dim,
-                      out_channels=args.num_filters[i],
-                      kernel_size=args.filter_sizes[i])
-            for i in range(len(args.filter_sizes))
+        self.conv1d_list = nn.ModuleList ([
+            nn.Conv1d(
+                in_channels=args.embed_dim,
+                out_channels=args.num_filters[i],
+                kernel_size=args.filter_sizes[i]
+            ) for i in range(len(args.filter_sizes))
         ])
+
         # Fully-connected layer and Dropout
         self.fc = nn.Linear(np.sum(args.num_filters), args.out_units)
         self.dropout = nn.Dropout(p=0.5)
 
     def forward(self, x):
-        """Perform a forward pass through the network.
+        """ Perform a forward pass through the network.
 
         Args:
-            input_ids (torch.Tensor): A tensor of token ids with shape
-                (batch_size, max_sent_length)
+            x (torch.Tensor): A tensor of token ids with shape (batch_size, max_sent_length)
 
         Returns:
-            logits (torch.Tensor): Output logits with shape (batch_size,
-                n_classes)
+            logits (torch.Tensor): Output logits with shape (batch_size, n_classes)
         """
 
-        # Get embeddings from `input_ids`. Output shape: (b, max_len, embed_dim)
+        # Get embeddings from `input_ids`. 
+        # Output shape: (b, max_len, embed_dim)
         x_embed = self.embedding(x).float()
 
         # Permute `x_embed` to match input shape requirement of `nn.Conv1d`.
@@ -275,13 +264,11 @@ class CNNClassifier(MLP):
         x_conv_list = [F.relu(conv1d(x_reshaped)) for conv1d in self.conv1d_list]
 
         # Max pooling. Output shape: (b, num_filters[i], 1)
-        x_pool_list = [F.max_pool1d(x_conv, kernel_size=x_conv.shape[2])
-            for x_conv in x_conv_list]
+        x_pool_list = [F.max_pool1d(x_conv, kernel_size=x_conv.shape[2]) for x_conv in x_conv_list]
         
         # Concatenate x_pool_list to feed the fully connected layer.
         # Output shape: (b, sum(num_filters))
-        x_fc = torch.cat([x_pool.squeeze(dim=2) for x_pool in x_pool_list],
-                        dim=1)
+        x_fc = torch.cat([x_pool.squeeze(dim=2) for x_pool in x_pool_list], dim=1)
         
         # Compute logits. Output shape: (b, n_classes)
         logits = self.fc(self.dropout(x_fc))

@@ -103,9 +103,9 @@ class PaddingVectorizer(TextVectorizer):
         for token in text.split(" "):
             if token not in string.punctuation:
                 padded_text.append(self.text_vocab.lookup_token(token))
-        padded_text = (self.seq_len - len(padded_text)) * [self.text_vocab.lookup_token(pad_token)] + padded_text
+        padded_text = (128 - len(padded_text)) * [self.text_vocab.lookup_token(pad_token)] + padded_text
 
-        return padded_text
+        return torch.tensor(padded_text)
 
     def load_pretrained_embed(self,filename):
         pad_token = self.text_vocab.pad_token
