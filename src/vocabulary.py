@@ -11,7 +11,7 @@ class Vocabulary(object):
 
         if token_to_idx is None:
             token_to_idx = {}
-        self.token_to_idx = token_to_idx
+        self._token_to_idx = token_to_idx
         self._idx_to_token = {idx: token for token, idx in self.token_to_idx.items()}
         self._add_unk = add_unk
         self._unk_token = unk_token
@@ -20,17 +20,17 @@ class Vocabulary(object):
         if add_pad:
             self.add_token(pad_token)
         
-        self.unk_index = -1
+        self._unk_index = -1
         if add_unk:
-            self.unk_index = self.add_token(unk_token)
+            self._unk_index = self.add_token(unk_token)
+    
+    @property
+    def unk_index(self):
+        return self._unk_index
 
     @property
     def token_to_idx(self):
-        return self.__token_to_idx
-
-    @token_to_idx.setter
-    def token_to_idx(self, value):
-        self.__token_to_idx = value
+        return self._token_to_idx
 
     @property
     def pad_token(self):
@@ -42,6 +42,16 @@ class Vocabulary(object):
             raise ValueError("[!!] Required string parameter --> Passed was: {}".format(type(value)))
         self._pad_token = value
 
+    @property
+    def unk_token(self):
+        return self._unk_token
+
+    @unk_token.setter
+    def unk_token(self, value):
+        if not isinstance(value, str):
+            raise ValueError("[!!] Required string parameter --> Passed was: {}".format(type(value)))
+        self._unk_token = value
+
     def add_token(self, token):
         """ Update mapping dicts based on the token.
 
@@ -52,11 +62,11 @@ class Vocabulary(object):
             index (int): the integer corresponding to the token
         """
 
-        if token in self.token_to_idx:
-            index = self.token_to_idx[token]
+        if token in self._token_to_idx:
+            index = self._token_to_idx[token]
         else:
-            index = len(self.token_to_idx)
-            self.token_to_idx[token] = index
+            index = len(self._token_to_idx)
+            self._token_to_idx[token] = index
             self._idx_to_token[index] = token
 
         return index
@@ -77,9 +87,9 @@ class Vocabulary(object):
         """
 
         if self._add_unk:
-            return self.token_to_idx.get(token, self.unk_index)
+            return self._token_to_idx.get(token, self.unk_index)
         else:
-            return self.token_to_idx[token]
+            return self._token_to_idx[token]
     
     def lookup_index(self, index):
         """ Return the token associated with the index

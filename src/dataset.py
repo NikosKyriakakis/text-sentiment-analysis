@@ -60,7 +60,8 @@ class TextDataset(Dataset):
         text_data = pd.read_csv(text_csv)
         return cls(text_data, TextVectorizer.from_dataframe(text_data, mode=vectorizer_mode))
 
-    def get_vectorizer(self):
+    @property
+    def vectorizer(self):
         """ Returns the vectorizer """
 
         return self._vectorizer

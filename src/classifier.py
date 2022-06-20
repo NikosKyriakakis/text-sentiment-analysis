@@ -14,7 +14,6 @@ class MLP(nn.Module, ABC):
     def __init__(self, args):
         super().__init__()
 
-        self._topology = None
         self._args = args
         self._logs = {
             "train_loss": [],
@@ -76,12 +75,6 @@ class MLP(nn.Module, ABC):
         _, y_pred_indices = y_pred.max(dim=1)
         return f1_score(y_target, y_pred_indices, average='macro') * 100
 
-    def checkpoint(self):
-        size = len(self._logs["val_loss"])
-        if size > 1:
-            if self._logs["val_loss"][size - 1] < self._logs["val_loss"][size - 2]:
-                torch.save(self.state_dict(), self._args.save_dir)
-
     def _prepare_bin_lossfunc(self, tensor_data):
         return tensor_data.view(-1, 1).float()
 
@@ -93,8 +86,6 @@ class MLP(nn.Module, ABC):
         self = self.to(self._args.device)
 
         for _ in tqdm(range(self._args.num_epochs)):
-            # self.checkpoint()
-
             loss, acc, f1 = self.train_net()
             self._logs["train_loss"].append(loss)
             self._logs["train_acc"].append(acc)
