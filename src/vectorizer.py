@@ -1,5 +1,6 @@
 import string
 import numpy as np
+import torch
 from tqdm import tqdm
 
 from vocabulary import Vocabulary
@@ -122,5 +123,5 @@ class PaddingVectorizer(TextVectorizer):
                 if self.text_vocab.lookup_token(word) != self.text_vocab.unk_index:
                     embeddings[self.text_vocab.lookup_token(word)] = np.array(tokens[1:], dtype=np.float32)
         
-        return embeddings
+        return torch.tensor(embeddings)
 
