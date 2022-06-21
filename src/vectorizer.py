@@ -17,13 +17,20 @@ class TextVectorizer(ABC):
             label_vocab (Vocabulary): maps class labels to integers
         """
 
-        self.text_vocab = text_vocab
-        self.label_vocab = label_vocab
+        self._text_vocab = text_vocab
+        self._label_vocab = label_vocab
+
+    @property
+    def text_vocab(self):
+        return self._text_vocab
+
+    @property
+    def label_vocab(self):
+        return self._label_vocab
 
     @abstractmethod
     def vectorize(self, text):
         """ Empty abstract method """
-
 
     @classmethod
     def from_dataframe(cls, text_data, mode, cutoff=25, seq_len=128):
@@ -55,7 +62,7 @@ class TextVectorizer(ABC):
             if count > cutoff:
                 text_vocab.add_token(word)
 
-        if mode == "bow":
+        if mode == "onehot":
             vect = OneHotVectorizer(text_vocab, label_vocab)
         else:
             vect = PaddingVectorizer(text_vocab, label_vocab, seq_len)
@@ -107,13 +114,14 @@ class PaddingVectorizer(TextVectorizer):
 
         return torch.tensor(padded_text)
 
-    def load_pretrained_embed(self,filename):
+    def load_pretrained_embed(self, filename):
         pad_token = self.text_vocab.pad_token
         embeddings = None
+
         with open(filename, "r", encoding='utf-8', newline='\n', errors='ignore') as f:
             _, d = map(int, f.readline().split())
 
-            # Initilize random embeddings
+            # Initialize random embeddings
             embeddings = np.random.uniform(-0.25, 0.25, (len(self.text_vocab.token_to_idx), d))
             embeddings[self.text_vocab.lookup_token(pad_token)] = np.zeros((d,))
 
@@ -124,4 +132,3 @@ class PaddingVectorizer(TextVectorizer):
                     embeddings[self.text_vocab.lookup_token(word)] = np.array(tokens[1:], dtype=np.float32)
         
         return torch.tensor(embeddings)
-

@@ -25,18 +25,22 @@ class MLP(nn.Module, ABC):
         }
 
     def setup(self):
-        self.__configure_loss_function(self._args.criterion)
-        self.__configure_optimizer(self._args.optimizer)
-        self.__configure_metrics_method(self._args.binary_class)
+        is_binary = self.__configure_loss_function()
+        self.__configure_optimizer()
+        self.__configure_metrics_method(is_binary)
 
-    def __configure_loss_function(self, criterion):
-        if criterion == "bce_logits":
+    def __configure_loss_function(self):
+        if self._args.criterion == "bce_logits":
+            is_binary = True
             self._criterion = nn.BCEWithLogitsLoss()
         else:
+            is_binary = False
             self._criterion = nn.CrossEntropyLoss()
 
-    def __configure_optimizer(self, optimizer):
-        if optimizer == "Adam":
+        return is_binary
+
+    def __configure_optimizer(self):
+        if self._args.optimizer == "Adam":
             self._optimizer = optim.Adam(self.parameters(), lr=self._args.learning_rate)
         else:
             self._optimizer = optim.SGD(self.parameters(), lr=0.001, momentum=0.9)
@@ -205,7 +209,7 @@ class BOWClassifier(MLP):
             nn.Linear(128, self._args.out_units)
         )
 
-    def forward(self,x):
+    def forward(self, x):
         for layer in self._topology:
             x = layer(x)
         return x
@@ -266,7 +270,7 @@ class CNNClassifier(MLP):
         return logits
 
 class LSTMClassifier(MLP):
-    def __init__(self, args, hidden_size, num_layers):
+    def __init__(self, args):
         super().__init__(args)
 
         self.embedding = nn.Embedding.from_pretrained (
@@ -276,13 +280,13 @@ class LSTMClassifier(MLP):
 
         # Setup LSTM
         self.lstm = nn.LSTM (
-            input_size=self._args.embed_dim, 
+            input_size=args.embed_dim, 
             hidden_size=args.hidden_size,
             num_layers=args.num_layers, 
             batch_first=True
         ) 
         
-        self.fc_1 = nn.Linear(hidden_size, 128) 
+        self.fc_1 = nn.Linear(args.hidden_size, 128) 
         self.fc_2 = nn.Linear(128, args.out_units)
 
         self.relu = nn.ReLU()
@@ -290,13 +294,17 @@ class LSTMClassifier(MLP):
     def forward(self, x):
         # Use pretrained embeddings
         x = self.embedding(x).float()
+        
         # Calculate initial hidden & internal states
-        h_0 = torch.zeros(self.num_layers, x.size(0), self._args.hidden_size).to(self._args.device)
-        c_0 = torch.zeros(self.num_layers, x.size(0), self._args.hidden_size).to(self._args.device) 
+        h_0 = torch.zeros(self._args.num_layers, x.size(0), self._args.hidden_size).to(self._args.device)
+        c_0 = torch.zeros(self._args.num_layers, x.size(0), self._args.hidden_size).to(self._args.device) 
+
         # Propagate input through LSTM
         out, _ = self.lstm(x, (h_0, c_0)) 
+
         # Reshape input
         out = out[:, -1, :]
+
         # Forward input through 
         # the fully connected layers
         out = self.fc_1(out)

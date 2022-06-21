@@ -14,6 +14,7 @@ class TextDataset(Dataset):
         Args:
             text_data (pandas.DataFrame): the dataset
             vectorizer (TextVectorizer): vectorizer instantiated from dataset
+            language (str): the language in which the stopwords belong to
         """
 
         self._vectorizer = vectorizer
@@ -47,7 +48,7 @@ class TextDataset(Dataset):
 
 
     @classmethod
-    def load_dataset_and_make_vectorizer(cls, text_csv, vectorizer_mode="bow"):
+    def load_dataset_and_make_vectorizer(cls, text_csv, vectorizer_mode="onehot"):
         """ Load dataset and make a new vectorizer from scratch
 
         Args:
