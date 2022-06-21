@@ -194,7 +194,6 @@ class MLP(nn.Module, ABC):
         plt.legend(legend)
         plt.show()
 
-
 class BOWClassifier(MLP):
     def __init__(self, args):
         super().__init__(args)
@@ -265,3 +264,43 @@ class CNNClassifier(MLP):
         logits = self.fc(self.dropout(x_fc))
 
         return logits
+
+class LSTMClassifier(MLP):
+    def __init__(self, args, hidden_size, num_layers):
+        super().__init__(args)
+
+        self.embedding = nn.Embedding.from_pretrained (
+            args.pretrained_embedding, 
+            freeze=args.freeze_embedding
+        )
+
+        # Setup LSTM
+        self.lstm = nn.LSTM (
+            input_size=self._args.embed_dim, 
+            hidden_size=args.hidden_size,
+            num_layers=args.num_layers, 
+            batch_first=True
+        ) 
+        
+        self.fc_1 = nn.Linear(hidden_size, 128) 
+        self.fc_2 = nn.Linear(128, args.out_units)
+
+        self.relu = nn.ReLU()
+    
+    def forward(self, x):
+        # Use pretrained embeddings
+        x = self.embedding(x).float()
+        # Calculate initial hidden & internal states
+        h_0 = torch.zeros(self.num_layers, x.size(0), self._args.hidden_size).to(self._args.device)
+        c_0 = torch.zeros(self.num_layers, x.size(0), self._args.hidden_size).to(self._args.device) 
+        # Propagate input through LSTM
+        out, _ = self.lstm(x, (h_0, c_0)) 
+        # Reshape input
+        out = out[:, -1, :]
+        # Forward input through 
+        # the fully connected layers
+        out = self.fc_1(out)
+        out = self.relu(out)
+        out = self.fc_2(out)
+
+        return out
