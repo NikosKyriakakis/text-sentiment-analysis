@@ -218,13 +218,13 @@ class CNNClassifier(MLP):
     def __init__(self, args):
         super().__init__(args)
 
-        self.embedding = nn.Embedding.from_pretrained (
+        self._embedding = nn.Embedding.from_pretrained (
             args.pretrained_embedding, 
             freeze=args.freeze_embedding
         )
 
         # Conv Network
-        self.conv1d_list = nn.ModuleList ([
+        self._conv1d_list = nn.ModuleList ([
             nn.Conv1d(
                 in_channels=args.embed_dim,
                 out_channels=args.num_filters[i],
@@ -233,8 +233,24 @@ class CNNClassifier(MLP):
         ])
 
         # Fully-connected layer and Dropout
-        self.fc = nn.Linear(np.sum(args.num_filters), args.out_units)
-        self.dropout = nn.Dropout(p=0.5)
+        self._fc = nn.Linear(np.sum(args.num_filters), args.out_units)
+        self._dropout = nn.Dropout(p=0.5)
+
+    @property
+    def embedding(self):
+        return self._embedding
+
+    @property
+    def conv1d_list(self):
+        return self._conv1d_list
+
+    @property
+    def fc(self):
+        return self._fc
+    
+    @property
+    def dropout(self):
+        return self._dropout
 
     def forward(self, x):
         """ Perform a forward pass through the network.
@@ -273,23 +289,43 @@ class LSTMClassifier(MLP):
     def __init__(self, args):
         super().__init__(args)
 
-        self.embedding = nn.Embedding.from_pretrained (
+        self._embedding = nn.Embedding.from_pretrained (
             args.pretrained_embedding, 
             freeze=args.freeze_embedding
         )
 
         # Setup LSTM
-        self.lstm = nn.LSTM (
+        self._lstm = nn.LSTM (
             input_size=args.embed_dim, 
             hidden_size=args.hidden_size,
             num_layers=args.num_layers, 
             batch_first=True
         ) 
         
-        self.fc_1 = nn.Linear(args.hidden_size, 128) 
-        self.fc_2 = nn.Linear(128, args.out_units)
+        self._fc_1 = nn.Linear(args.hidden_size, 128) 
+        self._fc_2 = nn.Linear(128, args.out_units)
 
-        self.relu = nn.ReLU()
+        self._relu = nn.ReLU()
+
+    @property
+    def embedding(self):
+        return self._embedding  
+
+    @property
+    def lstm(self):
+        return self._lstm
+
+    @property
+    def fc_1(self):
+        return self._fc_1
+
+    @property
+    def relu(self):
+        return self._relu
+
+    @property
+    def fc_2(self):
+        return self._fc_2
     
     def forward(self, x):
         # Use pretrained embeddings
