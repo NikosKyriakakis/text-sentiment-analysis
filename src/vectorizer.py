@@ -33,7 +33,7 @@ class TextVectorizer(ABC):
         """ Empty abstract method """
 
     @classmethod
-    def from_dataframe(cls, text_data, mode, cutoff=25, seq_len=128):
+    def from_dataframe(cls, text_data, mode, cutoff=25, seq_len=700):
         """ Instantiate the vectorizer from the dataset dataframe
 
         Args:
@@ -110,6 +110,9 @@ class PaddingVectorizer(TextVectorizer):
         for token in text.split(" "):
             if token not in string.punctuation:
                 padded_text.append(self.text_vocab.lookup_token(token))
+                if len(padded_text) >= self.seq_len:
+                    padded_text = padded_text[:-1]
+                    break
         padded_text = (self.seq_len - len(padded_text)) * [self.text_vocab.lookup_token(pad_token)] + padded_text
 
         return torch.tensor(padded_text)

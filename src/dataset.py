@@ -2,7 +2,6 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from vectorizer import *
 from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
 
 import nltk
 import pandas as pd
@@ -59,7 +58,10 @@ class TextDataset(Dataset):
         """
 
         text_data = pd.read_csv(text_csv)
-        return cls(text_data, TextVectorizer.from_dataframe(text_data, mode=vectorizer_mode))
+        seq_len = text_data.text.str.len().max()
+        if seq_len > 1000:
+            seq_len = 128
+        return cls(text_data, TextVectorizer.from_dataframe(text_data, mode=vectorizer_mode, seq_len=seq_len))
 
     @property
     def vectorizer(self):
