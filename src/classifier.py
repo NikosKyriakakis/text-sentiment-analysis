@@ -71,12 +71,16 @@ class MLP(nn.Module, ABC):
         return f1_score(y_target, y_pred_indices, average='macro') * 100
 
     def _compute_mult_accuracy(self, y_pred, y_target):
+        y_target = y_target.cpu()
         _, y_pred_indices = y_pred.max(dim=1)
+        y_pred_indices = y_pred_indices.cpu()
         n_correct = torch.eq(y_pred_indices, y_target).sum().item()
         return n_correct / len(y_pred_indices) * 100
 
     def _compute_mult_f1(self, y_pred, y_target):
+        y_target = y_target.cpu()
         _, y_pred_indices = y_pred.max(dim=1)
+        y_pred_indices = y_pred_indices.cpu()
         return f1_score(y_target, y_pred_indices, average='macro') * 100
 
     def _prepare_bin_lossfunc(self, tensor_data):
