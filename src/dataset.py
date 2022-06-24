@@ -17,8 +17,8 @@ class TextDataset(Dataset):
         """
 
         self._vectorizer = vectorizer
-        self.train_data, self.test_data = train_test_split(text_data, test_size=0.2)
-        self.train_data, self.val_data = train_test_split(self.train_data, test_size=0.25)
+        self._train_data, self._test_data = train_test_split(text_data, test_size=0.2)
+        self._train_data, self._val_data = train_test_split(self.train_data, test_size=0.25)
 
         nltk.download('stopwords')
         self._stopwords = set(stopwords.words(language))
@@ -30,6 +30,18 @@ class TextDataset(Dataset):
         }
 
         self.set_split('train')
+
+    @property
+    def train_data(self):
+        return self._train_data
+
+    @property
+    def test_data(self):
+        return self._test_data
+
+    @property
+    def val_data(self):
+        return self._val_data
 
     def generate_batches(self, batch_size, shuffle=True, drop_last=True, device="cpu"):
         dataloader = DataLoader (
