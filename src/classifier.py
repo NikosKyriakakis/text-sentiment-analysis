@@ -8,9 +8,16 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 from sklearn.metrics import f1_score
 
-plt.style.use('ggplot')
+plt.style.use('_mpl-gallery-nogrid')
 
 class MLP(nn.Module, ABC):
+
+    """
+    The MLP class expands the nn.Module class from Pytorch and implements the basic operations of the classifiers
+    that will be built as child classes of MLP  
+    
+    """
+
     def __init__(self, args):
         super().__init__()
 
@@ -25,6 +32,11 @@ class MLP(nn.Module, ABC):
         }
 
     def setup(self):
+        """
+        Takes as input the returned value (True or False) of the configure_loss_function and accordingly determines the
+        type of the loss function, the optimizer and the metrics by calling the respective functions.
+         
+        """
         is_binary = self.__configure_loss_function()
         self.__configure_optimizer()
         self.__configure_metrics_method(is_binary)
@@ -199,10 +211,17 @@ class MLP(nn.Module, ABC):
         plt.plot(epochs, self._logs[train_metric])
         plt.plot(epochs, self._logs[val_metric])
 
-        plt.legend(legend)
+        plt.legend(legend, prop={'size': 16})
         plt.show()
 
 class BOWClassifier(MLP):
+
+    """
+    The BOW class expands the above MLP class and builts a Bag of Words model with its own topology and 
+    forward method.
+    
+    """
+
     def __init__(self, args):
         super().__init__(args)
 
@@ -219,6 +238,14 @@ class BOWClassifier(MLP):
         return x
         
 class CNNClassifier(MLP):
+
+    """
+    The CNN class expands the above MLP class and builts a CNN model with its own topology and 
+    forward method. Moreover it exploits the pre-trained embeddings we used to provide as input 
+    to our models.
+    
+    """
+
     def __init__(self, args):
         super().__init__(args)
 

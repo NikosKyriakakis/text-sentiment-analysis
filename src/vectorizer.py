@@ -70,11 +70,15 @@ class TextVectorizer(ABC):
         return vect
 
 class OneHotVectorizer(TextVectorizer):
+
+    """ The OneHotVectorizer class expands the TextVectorizer class which coordinates the Vocabularies and puts them to use
+    for the Bag of Words Classifier using One-Hot-Vector Representation for our text reviews"""
+
     def __init__(self, text_vocab, label_vocab):
         super().__init__(text_vocab, label_vocab)
     
     def vectorize(self, text):
-        """ Create a collapsed one­hit vector for the text
+        """ Create a collapsed one­-hot vector for the text
         Args:
             text (str): the text
         Returns:
@@ -89,6 +93,10 @@ class OneHotVectorizer(TextVectorizer):
         return one_hot
 
 class PaddingVectorizer(TextVectorizer):
+
+    """ The PaddingVectorizer class expands the TextVectorizer class which coordinates the Vocabularies and puts them to use
+    for CNN and LSTM Classifiers by padding our text reviews in order to be given as input to the aforementioned models """
+
     def __init__(self, text_vocab, label_vocab, seq_len):
         super().__init__(text_vocab, label_vocab)
 
@@ -105,6 +113,15 @@ class PaddingVectorizer(TextVectorizer):
         self.__seq_len = value
 
     def vectorize(self, text):
+
+        """ Create a collapsed one­-hot vector for the text
+        Args:
+            text (str): the text
+        Returns:
+            padded_text (tensor): the padded representation of each review starting with zeros and dimension equal to seq_len given 
+            from the user
+        """
+
         pad_token = self.text_vocab.pad_token
         padded_text = []
         for token in text.split(" "):
@@ -118,10 +135,20 @@ class PaddingVectorizer(TextVectorizer):
         return torch.tensor(padded_text)
 
     def load_pretrained_embed(self, filename):
+
+        """ Create embedding representation for every word of our vocabularu
+        Args:
+            filename : the file used from the pretrained model
+        Returns:
+            embeddings (tensor): the final representation of our words in 300 dimensional vector
+        """
+
         pad_token = self.text_vocab.pad_token
         embeddings = None
 
         with open(filename, "r", encoding='utf-8', newline='\n', errors='ignore') as f:
+            # The file we used has as information in the first row the total amount of columns and the total amount of rows in
+            # which our words will be represented (in our case the file consists of 2 million words and 300 dimensions ) 
             _, d = map(int, f.readline().split())
 
             # Initialize random embeddings

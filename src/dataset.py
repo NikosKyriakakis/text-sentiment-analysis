@@ -44,6 +44,16 @@ class TextDataset(Dataset):
         return self._val_data
 
     def generate_batches(self, batch_size, shuffle=True, drop_last=True, device="cpu"):
+
+        """
+        Args:
+            batch_size: the batch_size that the dataloader produces (defined in the arguments given in the main.ipynb)
+            shuffle: parameter to randomize the selection of data in batches
+            drop_last: The drop_last=True parameter ignores the last batch (when the number of examples in our dataset is not divisible
+            by our batch_size)
+            device: the device that the batches will be loaded for processing
+        """
+
         dataloader = DataLoader (
             dataset=self, 
             batch_size=batch_size, 
