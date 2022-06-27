@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 class TextVectorizer(ABC):
     """ The vectorizer class which coordinates the Vocabularies and puts them to use """
     
-    def __init__(self, text_vocab, label_vocab):
+    def __init__(self, text_vocab, label_vocab, max_padding=32024):
         """
         Args:
             text_vocab (Vocabulary): maps words to integers
@@ -19,6 +19,11 @@ class TextVectorizer(ABC):
 
         self._text_vocab = text_vocab
         self._label_vocab = label_vocab
+        self._max_padding = max_padding
+
+    @property
+    def max_padding(self):
+        return self._max_padding
 
     @property
     def text_vocab(self):
@@ -85,7 +90,7 @@ class OneHotVectorizer(TextVectorizer):
             one_hot (np.ndarray): the collapsed one­hot encoding
         """
 
-        one_hot = np.zeros(len(self.text_vocab), dtype=np.float32)
+        one_hot = np.zeros(self.max_padding, dtype=np.float32)
         for token in text.split(" "):
             if token not in string.punctuation:
                 one_hot[self.text_vocab.lookup_token(token)] = 1
