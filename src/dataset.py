@@ -82,7 +82,7 @@ class TextDataset(Dataset):
         text_data = pd.read_csv(text_csv)
         seq_len = text_data.text.str.len().max()
         if seq_len > 1000:
-            seq_len = 128
+            seq_len = 359
         return cls(text_data, TextVectorizer.from_dataframe(text_data, mode=vectorizer_mode, seq_len=seq_len))
 
     @property

@@ -10,16 +10,18 @@ from sklearn.metrics import f1_score
 
 plt.style.use('_mpl-gallery-nogrid')
 
-class MLP(nn.Module, ABC):
+class SimpleNN(nn.Module, ABC):
 
     """
-    The MLP class expands the nn.Module class from Pytorch and implements the basic operations of the classifiers
-    that will be built as child classes of MLP  
+    The SimpleNN class expands the nn.Module class and the ABC(abstract base class) from Pytorch and implements the basic operations of the classifiers
+    that will be built as child classes of SimpleNN  
     
     """
 
     def __init__(self, args):
         super().__init__()
+
+        self.embedding = None
 
         self._args = args
         self._logs = {
@@ -33,15 +35,20 @@ class MLP(nn.Module, ABC):
 
     def setup(self):
         """
-        Takes as input the returned value (True or False) of the configure_loss_function and accordingly determines the
-        type of the loss function, the optimizer and the metrics by calling the respective functions.
-         
+        Determines which loss function, optimizer and metrics to be used based on the classification task.
+                 
         """
         is_binary = self.__configure_loss_function()
         self.__configure_optimizer()
         self.__configure_metrics_method(is_binary)
 
+       
     def __configure_loss_function(self):
+        """ Based on user choice configures whether to use binary or multi-class cross entropy loss function
+
+        Returns:
+            [bool]: [binary flag to determine whether binary or multi-class task was selected by the user]
+        """
         if self._args.criterion == "bce_logits":
             is_binary = True
             self._criterion = nn.BCEWithLogitsLoss()
@@ -52,12 +59,20 @@ class MLP(nn.Module, ABC):
         return is_binary
 
     def __configure_optimizer(self):
+        """ Based on user choice configures whether to use Adam or Stohastic Gradient Descent with momentum optimizer
+
+        """
         if self._args.optimizer == "Adam":
             self._optimizer = optim.Adam(self.parameters(), lr=self._args.learning_rate)
         else:
             self._optimizer = optim.SGD(self.parameters(), lr=0.001, momentum=0.9)
 
     def __configure_metrics_method(self, binary):
+        """Based on the classification task determines which user defined methods to use in order to measure accuracy, f1 score and loss.
+
+        Args:
+            binary ([bool]): [binary flag to determine whether binary or multi-class task was selected by the user]
+        """
         if binary:
             self._compute_accuracy = self._compute_bin_accuracy
             self._compute_f1 = self._compute_bin_f1
@@ -72,17 +87,44 @@ class MLP(nn.Module, ABC):
         """ Abstract method """
 
     def _compute_bin_accuracy(self, y_pred, y_target):
+        """Computes accuracy for a binary classification task
+
+        Args:
+            y_pred ([tensor]): [the predictions our model made]
+            y_target ([tensor]): [the actual ground truths]
+
+        Returns:
+            [float]: [accuracy score]
+        """
         y_target = y_target.cpu()
         y_pred_indices = (torch.sigmoid(y_pred) > 0.5).cpu().long()
         n_correct = torch.eq(y_pred_indices, y_target).sum().item()
         return n_correct / len(y_pred_indices) * 100
 
     def _compute_bin_f1(self, y_pred, y_target):
+        """Computes f1 for a binary classification task
+
+        Args:
+            y_pred ([tensor]): [the predictions our model made]
+            y_target ([tensor]): [the actual ground truths]
+
+        Returns:
+            [float]: [f1 score]
+        """
         y_target = y_target.cpu()
         y_pred_indices = (torch.sigmoid(y_pred) > 0.5).cpu().long()
         return f1_score(y_target, y_pred_indices, average='macro') * 100
 
     def _compute_mult_accuracy(self, y_pred, y_target):
+        """Computes accuracy for a multi-class classification task
+
+        Args:
+            y_pred ([tensor]): [the predictions our model made]
+            y_target ([tensor]): [the actual ground truths]
+
+        Returns:
+            [float]: [accuracy score]
+        """
         y_target = y_target.cpu()
         _, y_pred_indices = y_pred.max(dim=1)
         y_pred_indices = y_pred_indices.cpu()
@@ -90,18 +132,47 @@ class MLP(nn.Module, ABC):
         return n_correct / len(y_pred_indices) * 100
 
     def _compute_mult_f1(self, y_pred, y_target):
+        """Computes f1 for a multi-class classification task
+
+        Args:
+            y_pred ([type]): [the predictions our model made]
+            y_target ([type]): [the actual ground truths]
+
+        Returns:
+            [float]: [f1 score]
+        """
         y_target = y_target.cpu()
         _, y_pred_indices = y_pred.max(dim=1)
         y_pred_indices = y_pred_indices.cpu()
         return f1_score(y_target, y_pred_indices, average='macro') * 100
 
     def _prepare_bin_lossfunc(self, tensor_data):
+        """Apply transformation to labels in order to be compatible with bce loss function
+
+        Args:
+            tensor_data ([tensor]): [labels as tensors]
+
+        Returns:
+            [tensor]: [the labels in the appropriate representation]
+        """
         return tensor_data.view(-1, 1).float()
 
     def _prepare_mult_lossfunc(self, tensor_data):
+        """Apply transformation to labels in order to be compatible with Cross Entropy loss function
+
+        Args:
+            tensor_data ([tensor]): [labels as tensors]
+
+        Returns:
+            [tensor]: [the labels in the appropriate representation]
+        """
         return tensor_data.long()
 
     def fit(self):
+        """Loops for the range of epochs we have selected and calls the train_net method to compute the respective accuracy and f1 score
+           for the training set.
+           Then calls the eval_net method to compute the aformentioned metrics for the test set 
+        """
         # Send model to available hardware
         self = self.to(self._args.device)
 
@@ -119,6 +190,14 @@ class MLP(nn.Module, ABC):
                 self._logs["val_f1"].append(f1)
         
     def eval_net(self, mode):
+        """Computes the accuracy and f1 score in the mode that the user has defined (test or validation)
+
+        Args:
+            mode ([string]): [The mode of the model]
+
+        Returns:
+            [float]: [The loss, accuracy and f1 score]
+        """
         self.eval()
 
         self._args.dataset.set_split(mode)
@@ -152,6 +231,11 @@ class MLP(nn.Module, ABC):
         return running_loss, running_acc, running_f1
 
     def train_net(self):
+        """This method is used in order to train the model and computes the performance of the model in the training set
+
+        Returns:
+            [float]: [The loss, accuracy and f1 score]
+        """
         # Initiate training mode
         self.train()
 
@@ -193,6 +277,12 @@ class MLP(nn.Module, ABC):
         return running_loss, running_acc, running_f1
 
     def plot_logs(self, title, legend):
+        """A method to plot the train and validation scores at each epoch
+
+        Args:
+            title ([string]): [The title of the plot]
+            legend ([string]): [The legend of the plot]
+        """
         plt.figure(figsize=(10, 5))
         plt.title(title)
 
@@ -214,10 +304,10 @@ class MLP(nn.Module, ABC):
         plt.legend(legend, prop={'size': 16})
         plt.show()
 
-class BOWClassifier(MLP):
+class BOWClassifier(SimpleNN):
 
     """
-    The BOW class expands the above MLP class and builts a Bag of Words model with its own topology and 
+    The BOW class expands the above SimpleNN class and builts a Bag of Words model with its own topology and 
     forward method.
     
     """
@@ -237,10 +327,10 @@ class BOWClassifier(MLP):
             x = layer(x)
         return x
         
-class CNNClassifier(MLP):
+class CNNClassifier(SimpleNN):
 
     """
-    The CNN class expands the above MLP class and builts a CNN model with its own topology and 
+    The CNN class expands the above SimpleNN class and builts a CNN model with its own topology and 
     forward method. Moreover it exploits the pre-trained embeddings we used to provide as input 
     to our models.
     
@@ -248,8 +338,9 @@ class CNNClassifier(MLP):
 
     def __init__(self, args):
         super().__init__(args)
-
-        self._embedding = nn.Embedding.from_pretrained (
+        
+        # We exploit the pretrained embeddings to be fed as input in the CNN classifier
+        self.embedding = nn.Embedding.from_pretrained (
             args.pretrained_embedding, 
             freeze=args.freeze_embedding
         )
@@ -267,9 +358,6 @@ class CNNClassifier(MLP):
         self._fc = nn.Linear(np.sum(args.num_filters), args.out_units)
         self._dropout = nn.Dropout(p=0.5)
 
-    @property
-    def embedding(self):
-        return self._embedding
 
     @property
     def conv1d_list(self):
@@ -316,11 +404,17 @@ class CNNClassifier(MLP):
 
         return logits
 
-class LSTMClassifier(MLP):
+class LSTMClassifier(SimpleNN):
+    """LSTMClassifier class expands the initial SimpleNN parent class and differentiate its functionality with the usage of the 
+       pre-trained embeddings and in the forward method. 
+
+    Args:
+        SimpleNN ([type]): [description]
+    """
     def __init__(self, args):
         super().__init__(args)
 
-        self._embedding = nn.Embedding.from_pretrained (
+        self.embedding = nn.Embedding.from_pretrained (
             args.pretrained_embedding, 
             freeze=args.freeze_embedding
         )
@@ -338,9 +432,6 @@ class LSTMClassifier(MLP):
 
         self._relu = nn.ReLU()
 
-    @property
-    def embedding(self):
-        return self._embedding  
 
     @property
     def lstm(self):
