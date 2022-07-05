@@ -344,6 +344,7 @@ class CNNClassifier(SimpleNN):
             args.pretrained_embedding, 
             freeze=args.freeze_embedding
         )
+        self.embedding = self.embedding.to(args.device)
 
         # Conv Network
         self._conv1d_list = nn.ModuleList ([
@@ -418,6 +419,7 @@ class LSTMClassifier(SimpleNN):
             args.pretrained_embedding, 
             freeze=args.freeze_embedding
         )
+        self.embedding = self.embedding.to(args.device)
 
         # Setup LSTM
         self._lstm = nn.LSTM (
