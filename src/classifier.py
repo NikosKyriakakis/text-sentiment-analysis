@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 import numpy as np
+import shutil
+import os
 import torch.nn.functional as F
 from abc import ABC, abstractmethod
 from tqdm import tqdm
@@ -32,6 +34,7 @@ class SimpleNN(nn.Module, ABC):
             "val_acc": [],
             "val_f1": []
         }
+        self._best_epoch = None
 
     def setup(self):
         """
@@ -168,15 +171,38 @@ class SimpleNN(nn.Module, ABC):
         """
         return tensor_data.long()
 
+    def save_state(self, state, is_best_model):
+        """ Save the state of a model
+
+        Args:
+            state (dict): a dictionary containing all necessary elements to checkpoint 
+            is_best_model (bool): a flag to indicate whether the current model has the best f1-score
+        """
+        state_path = os.path.join(self._args.save_state_path, self._args.name)
+        torch.save(state, state_path)
+
+        if is_best_model:
+            best_path = os.path.join(self._args.save_best_path, self._args.name)
+            shutil.copyfile(state_path, best_path)
+
+    def load_state(self):
+        """ Load the best performing model or the last one that was saved during training
+        """
+        state_path = os.path.join(self._args.save_state_path, self._args.name)
+        saved_state = torch.load(state_path)
+        self.load_state_dict(saved_state['dict'])
+        self._optimizer.load_state_dict(saved_state['optimizer'])
+
     def fit(self):
-        """Loops for the range of epochs we have selected and calls the train_net method to compute the respective accuracy and f1 score
-           for the training set.
-           Then calls the eval_net method to compute the aformentioned metrics for the test set 
+        """ Loops for the range of epochs we have selected and calls the train_net method to compute the respective accuracy and f1 score
+            for the training set.
+            Then calls the eval_net method to compute the aformentioned metrics for the test set 
         """
         # Send model to available hardware
         self = self.to(self._args.device)
 
-        for _ in tqdm(range(self._args.num_epochs)):
+        max_f1 = 0
+        for epoch in tqdm(range(self._args.num_epochs)):
             loss, acc, f1 = self.train_net()
             self._logs["train_loss"].append(loss)
             self._logs["train_acc"].append(acc)
@@ -188,6 +214,20 @@ class SimpleNN(nn.Module, ABC):
                 self._logs["val_loss"].append(loss)
                 self._logs["val_acc"].append(acc)
                 self._logs["val_f1"].append(f1)
+
+                state = {
+                    "dict": self.state_dict(),
+                    "optimizer": self._optimizer.state_dict()
+                }
+
+                # Save current model state
+                self.save_state(state, False)
+
+                # Save the best model so far
+                if max_f1 < f1:
+                    self._best_epoch = epoch
+                    self.save_state(state, True)
+
         
     def eval_net(self, mode):
         """Computes the accuracy and f1 score in the mode that the user has defined (test or validation)
@@ -298,8 +338,12 @@ class SimpleNN(nn.Module, ABC):
             train_metric = "train_f1"
             val_metric = "val_f1"
 
-        plt.plot(epochs, self._logs[train_metric])
-        plt.plot(epochs, self._logs[val_metric])
+        plt.plot(epochs, self._logs[train_metric], marker='o', markersize=5)
+        plt.plot(epochs, self._logs[val_metric], marker='o', markersize=5)
+
+        if self._best_epoch is not None and title == "F1":
+            legend.append("Checkpoint")
+            plt.plot([self._best_epoch], [self._logs["val_f1"][self._best_epoch]], marker='*', markersize=15, color='red')
 
         plt.legend(legend, prop={'size': 16})
         plt.show()
@@ -330,7 +374,7 @@ class BOWClassifier(SimpleNN):
 class CNNClassifier(SimpleNN):
 
     """
-    The CNN class expands the above SimpleNN class and builts a CNN model with its own topology and 
+    The CNN class expands the above SimpleNN class and builds a CNN model with its own topology and 
     forward method. Moreover it exploits the pre-trained embeddings we used to provide as input 
     to our models.
     
