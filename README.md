@@ -9,7 +9,7 @@ The main objectives of this project were the following:
 
 ## Prerequisities
 * The datasets which are required in the context of this project can be found in the current Github repository in the **data** folder.
-* Since pretrained embeddings have been used (fasttext), the .vec file containing them can be found in the following URL: https://drive.google.com/drive/folders/1APqbF4OFCiuyPuIf_iQ-icC5MRuQlkU-?usp=sharing
+* Since pretrained embeddings have been used (fasttext), the .vec file containing them and the used datasets can be found in the following URL: https://drive.google.com/drive/folders/1APqbF4OFCiuyPuIf_iQ-icC5MRuQlkU-?usp=sharing
 * Once the .vec file has been downloaded, simply move it to the **data** directory of this project
 
 ## Notes
