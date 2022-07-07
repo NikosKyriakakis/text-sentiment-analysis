@@ -224,7 +224,8 @@ class SimpleNN(nn.Module, ABC):
                 self.save_state(state, False)
 
                 # Save the best model so far
-                if max_f1 < f1:
+                if max_f1 <= f1:
+                    max_f1 = f1
                     self._best_epoch = epoch
                     self.save_state(state, True)
 
