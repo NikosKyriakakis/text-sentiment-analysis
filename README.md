@@ -12,6 +12,7 @@ The main objectives of this project were the following:
 * To use them simply create a directory named **data** in the root directory of this project and place them inside.
 * Since pretrained embeddings have been used (fasttext), the .vec file containing them can be found in the following URL: https://drive.google.com/drive/folders/1APqbF4OFCiuyPuIf_iQ-icC5MRuQlkU-?usp=sharing
 * Once the .vec file has been downloaded, simply move it to the **data** directory which you created in the previous step.
+*Finally, create 2 new directories, namely "checkpoints" and "best_models" in the root directory of the project.
 
 ## Notes
 * Python version used:  3.8.10
